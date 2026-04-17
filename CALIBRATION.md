@@ -1,0 +1,57 @@
+# Gurnard Beach Walk — Calibration Data
+
+## Real-World Observations
+
+| Date | Time (BST) | User Rating | Notes |
+|------|-----------|-------------|-------|
+| Tue 14 Apr 2026 | 14:45 | 5.0 | Perfect walk, massive beach, really long walk possible |
+| Wed 16 Apr 2026 | 12:47 | 1.5 | Only 3-5 metres of beach at widest, can't walk far |
+| Thu 17 Apr 2026 | 15:26 | 2.5 | Tide falling but can't get past inlet/headland |
+| Thu 17 Apr 2026 | 15:40 | 3.0 | Inlet just passable in shoes |
+| Thu 17 Apr 2026 | ~15:58 | 4.5 | Good beach, well past inlet |
+
+## Key Thresholds
+
+- **Inlet threshold: ~2.1m** — Below this height, the inlet between the sailing club and Gurnard Luck becomes passable and the full walk opens up
+- **No beach: ~3.8m+** — At high water, no beach at all (0 stars)
+- **Perfect walk: ~0.5-1.2m** — Massive beach, walk as far as you like (5 stars)
+
+## Tide Reference Data (thebeachguide.co.uk)
+
+### Friday 17 April 2026
+- Low: 05:04am (0.68m)
+- High: 12:06pm (4.26m)
+- Low: 05:23pm (0.57m)
+
+### Saturday 18 April 2026
+- High: 12:05am (4.39m)
+- Low: 05:46am (0.55m)
+- High: 12:26pm (4.32m)
+- Low: 06:07pm (0.53m)
+
+### Sunday 19 April 2026
+- High: 12:46am (4.4m)
+- Low: 06:30am (0.51m)
+- High: 01:11pm (4.32m)
+- Low: 06:52pm (0.59m)
+
+### Monday 20 April 2026
+- High: 01:33am (4.35m)
+- Low: 07:16am (0.58m)
+- High: 02:03pm (4.27m)
+- Low: 07:39pm (0.74m)
+
+## Model Calibration History
+
+### v1 (initial build)
+- Harmonic model with 7 constituents, phases estimated
+- Result: timing ~1.5-2 hours early
+
+### v2 (phase recalibration)
+- REF_MS shifted +90 minutes (08:54 UTC → 10:24 UTC)
+- Result: timing within ~8 minutes of real tide data
+
+### v3 (rating curve with inlet threshold)
+- Step-change at 2.1m inlet threshold
+- Direction-aware verdicts (safety warnings on rising tide)
+- All 4 calibration points within ~0.1 stars
