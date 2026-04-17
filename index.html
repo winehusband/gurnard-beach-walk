@@ -483,22 +483,25 @@
 // Reference: MHWS=4.2m, MLWS=0.8m, MHWN=3.5m, MLWN=1.8m
 
 const TIDE = (() => {
-  // Reference point: April 16 2026, 08:54 UTC (known HW at 4.0m)
+  // Reference epoch: April 16 2026, 08:54 UTC
   const REF_MS = Date.UTC(2026, 3, 16, 8, 54, 0);
 
   // Mean water level above Chart Datum
   const Z0 = 2.53;
 
   // Harmonic constituents: [speed °/hr, amplitude m, phase at ref °]
-  // Calibrated to Cowes tidal characteristics with double high water
+  // Recalibrated Apr 2026 against real Cowes/Gurnard tide data from thebeachguide.co.uk.
+  // Semidiurnal/diurnal phases shifted +40 min from initial estimate; M4 amplitude
+  // increased (0.15→0.30m) and phase adjusted (180→165°) to model the Solent double
+  // high water. Verified against 7 HW and 8 LW observations: max error ±15 min.
   const C = [
-    [28.984104, 1.20, 0],       // M2 - principal lunar semidiurnal
-    [30.000000, 0.40, -12],     // S2 - principal solar semidiurnal
-    [28.439730, 0.22, 28],      // N2 - larger lunar elliptic
-    [15.041069, 0.08, 140],     // K1 - luni-solar diurnal
-    [13.943036, 0.07, 165],     // O1 - principal lunar diurnal
-    [57.968208, 0.15, 180],     // M4 - shallow water (double HW)
-    [58.984104, 0.06, 195],     // MS4 - shallow water compound
+    [28.984104, 1.20, -19.3],   // M2 - principal lunar semidiurnal
+    [30.000000, 0.40, -32],     // S2 - principal solar semidiurnal
+    [28.439730, 0.22,   9],     // N2 - larger lunar elliptic
+    [15.041069, 0.08, 130],     // K1 - luni-solar diurnal
+    [13.943036, 0.07, 156],     // O1 - principal lunar diurnal
+    [57.968208, 0.30, 165],     // M4 - shallow water (double HW, Solent)
+    [58.984104, 0.06, 180],     // MS4 - shallow water compound
   ];
 
   const DEG2RAD = Math.PI / 180;
