@@ -560,29 +560,71 @@ const TIDE = (() => {
 // STAR RATING ENGINE
 // =========================================
 const RATING = (() => {
-  // Calibrated from Hamish's observations:
-  // 5 stars: ~0.6m (massive beach, very long walk)
-  // 1.5 stars: ~3.0m (3-5m of beach, can't walk far)
-  // 0 stars: ~4.0m+ (no beach at all)
-  const HIGH_CUTOFF = 3.95;  // 0 stars at this height and above
-  const LOW_CUTOFF = 0.60;   // 5 stars at this height and below
+  // Step-change threshold model — calibrated from Hamish's observations (April 2026):
+  //   3.717m (Wed 16 Apr 12:47 BST) → 1.5 stars: only 3-5m of beach
+  //   2.337m (Thu 17 Apr 15:26 BST) → 2.5 stars: can't get past headland
+  //   2.111m (Thu 17 Apr 15:40 BST) → 3.0 stars: inlet just passable (step here)
+  //   1.203m (Tue 14 Apr 14:45 BST) → 5.0 stars: perfect walk
+  //
+  // Two zones separated by a step at the inlet threshold:
+  //   UPPER zone (inlet blocked): power curve 0→2.5 stars, HIGH→INLET
+  //     Beach appears very rapidly near HW on a gentle slope, so a power
+  //     curve (exponent 0.17) is used rather than linear to match observed
+  //     fast beach exposure. At 3.717m (just 83mm below no-beach cutoff)
+  //     you already get 1.5 stars — linear would give only 0.1 stars.
+  //   LOWER zone (inlet clear): linear 3→5 stars, INLET→LOW
+  //     Step of 0.5 stars at the inlet threshold reflects the walk
+  //     transforming from "limited" to "full beach access."
+
+  const HIGH  = 3.8;   // 0 stars above — no beach
+  const INLET = 2.15;  // inlet threshold — step jump from ~2.5 → 3.0 stars
+  const LOW   = 1.2;   // 5 stars below — perfect conditions
 
   function stars(height) {
-    if (height >= HIGH_CUTOFF) return 0;
-    if (height <= LOW_CUTOFF) return 5;
-    return 5 * (HIGH_CUTOFF - height) / (HIGH_CUTOFF - LOW_CUTOFF);
+    if (height >= HIGH) return 0;
+    if (height <= LOW)  return 5;
+    if (height > INLET) {
+      // Short beach zone: rapid beach exposure near HW
+      const x = (HIGH - height) / (HIGH - INLET);
+      return 2.5 * Math.pow(x, 0.17);
+    } else {
+      // Full walk zone: linear 3 → 5
+      return 3 + 2 * (INLET - height) / (INLET - LOW);
+    }
   }
 
-  function verdict(s) {
-    if (s >= 4.5) return { text: 'Perfect Walk!', desc: 'Massive beach. Walk as far as you like.' };
-    if (s >= 3.5) return { text: 'Great Conditions', desc: 'Plenty of beach for a good long walk.' };
-    if (s >= 2.5) return { text: 'Worth a Visit', desc: 'Decent amount of beach to enjoy.' };
-    if (s >= 1.5) return { text: 'Limited Beach', desc: 'Some beach accessible but can\'t walk far.' };
-    if (s >= 0.5) return { text: 'Not Much Beach', desc: 'Very narrow strip. Might get your feet wet.' };
-    return { text: 'No Beach', desc: 'Tide is too high. Water right up to the wall.' };
+  // verdict(s, isRising) — direction-aware safety messaging
+  function verdict(s, isRising) {
+    if (s === 0) {
+      return {
+        text: 'No Beach',
+        desc: isRising ? 'Tide rising. No beach.' : 'Tide falling — beach will appear soon.'
+      };
+    }
+    if (s < 3.0) {
+      // Short beach, inlet blocked
+      if (isRising) return { text: 'Beach Closing', desc: 'Not worth it — beach is shrinking.' };
+      return { text: 'Short Beach Only', desc: 'Wait a bit — beach is opening up. Inlet still blocked.' };
+    }
+    // s >= 3.0: inlet open
+    if (s < 3.5) {
+      // Inlet just barely open — most critical zone
+      if (isRising) return {
+        text: 'Inlet Closing Soon',
+        desc: 'Short walk only — inlet closing soon. Stay this side of the headland.'
+      };
+      return { text: 'Inlet Just Open', desc: 'Go walk! Inlet just passable. Beach opening up.' };
+    }
+    if (s < 4.5) {
+      if (isRising) return { text: 'Great Walk — Tide Coming In', desc: 'Go walk! Good conditions now.' };
+      return { text: 'Great Walk', desc: 'Go walk! Beach is opening up. Plenty of beach.' };
+    }
+    // s >= 4.5
+    if (isRising) return { text: 'Perfect Walk!', desc: 'Go walk! Massive beach right now.' };
+    return { text: 'Perfect Walk!', desc: 'Go walk! Massive beach. Walk as far as you like.' };
   }
 
-  return { stars, verdict };
+  return { stars, verdict, INLET };
 })();
 
 
@@ -740,14 +782,14 @@ function renderTideCurve(viewDate) {
   container.innerHTML = svg;
 }
 
-function LOW_CUTOFF() { return 0.60; }
-function HIGH_CUTOFF() { return 3.95; }
+function LOW_CUTOFF() { return 1.2; }
+function HIGH_CUTOFF() { return 3.8; }
 
 function update(date) {
   const h = TIDE.height(date);
   const r = TIDE.rate(date);
   const s = RATING.stars(h);
-  const v = RATING.verdict(s);
+  const v = RATING.verdict(s, r > 0.05);
 
   // Rating
   document.getElementById('starsDisplay').innerHTML = renderStars(s);
