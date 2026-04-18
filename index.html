@@ -579,7 +579,7 @@ const RATING = (() => {
 
   const HIGH  = 3.8;   // 0 stars above — no beach
   const INLET = 2.15;  // inlet threshold — step jump from ~2.5 → 3.0 stars
-  const LOW   = 1.2;   // 5 stars below — perfect conditions
+  const LOW   = 1.55;  // 5 stars below — perfect conditions
 
   function stars(height) {
     if (height >= HIGH) return 0;
@@ -783,7 +783,7 @@ function renderTideCurve(viewDate) {
   container.innerHTML = svg;
 }
 
-function LOW_CUTOFF() { return 1.2; }
+function LOW_CUTOFF() { return 1.55; }
 function HIGH_CUTOFF() { return 3.8; }
 
 function update(date) {

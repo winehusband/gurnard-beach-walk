@@ -9,12 +9,13 @@
 | Thu 17 Apr 2026 | 15:26 | 2.5 | Tide falling but can't get past inlet/headland |
 | Thu 17 Apr 2026 | 15:40 | 3.0 | Inlet just passable in shoes |
 | Thu 17 Apr 2026 | ~15:58 | 4.5 | Good beach, well past inlet |
+| Sat 18 Apr 2026 | 16:55 | 4.7 | Long walk possible, app showed 4.1 (model was too conservative) |
 
 ## Key Thresholds
 
 - **Inlet threshold: ~2.1m** — Below this height, the inlet between the sailing club and Gurnard Luck becomes passable and the full walk opens up
 - **No beach: ~3.8m+** — At high water, no beach at all (0 stars)
-- **Perfect walk: ~0.5-1.2m** — Massive beach, walk as far as you like (5 stars)
+- **Perfect walk: ~1.55m and below** — Enough beach for the full walk at maximum quality (5 stars)
 
 ## Tide Reference Data (thebeachguide.co.uk)
 
@@ -55,3 +56,9 @@
 - Step-change at 2.1m inlet threshold
 - Direction-aware verdicts (safety warnings on rising tide)
 - All 4 calibration points within ~0.1 stars
+
+### v4 (lower zone recalibration)
+- Raised LOW cutoff from 1.2m to 1.55m (5-star threshold)
+- New data point: Sat 18 Apr 16:55 at 1.628m → 4.7 stars (was showing 4.1)
+- Change: linear lower zone now steeper (shorter 2.15→1.55m range vs 2.15→1.2m)
+- All 5 calibration points within ~0.15 stars
