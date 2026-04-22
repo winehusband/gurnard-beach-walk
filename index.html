@@ -484,10 +484,12 @@
 // Reference: MHWS=4.2m, MLWS=0.8m, MHWN=3.5m, MLWN=1.8m
 
 const TIDE = (() => {
-  // Reference point: April 16 2026, 10:24 UTC (calibrated HW ~4.0m)
-  // Shifted +1h30m from original 08:54 to match real Cowes tide times (April 2026)
-  // Verified against thebeachguide.co.uk: Fri 17 Apr HW 12:06 BST → model predicts 12:14 BST ✓
-  const REF_MS = Date.UTC(2026, 3, 16, 10, 24, 0);
+  // Reference point: April 16 2026, 10:19 UTC
+  // v5: multi-constituent recalibration against 7 real-world observations Apr 14-22 2026
+  // S2 amplitude reduced (spring-neap cycle less pronounced in Solent double-HW system)
+  // S2, N2, M4, MS4 phases adjusted to fit full spring-neap range
+  // All 7 calibration points within ±0.15 stars; Apr 17 HW ~25min error
+  const REF_MS = Date.UTC(2026, 3, 16, 10, 19, 0);
 
   // Mean water level above Chart Datum
   const Z0 = 2.53;
@@ -495,13 +497,13 @@ const TIDE = (() => {
   // Harmonic constituents: [speed °/hr, amplitude m, phase at ref °]
   // Calibrated to Cowes tidal characteristics with double high water
   const C = [
-    [28.984104, 1.20, 0],       // M2 - principal lunar semidiurnal
-    [30.000000, 0.40, -12],     // S2 - principal solar semidiurnal
-    [28.439730, 0.22, 28],      // N2 - larger lunar elliptic
+    [28.984104, 1.20,   0],     // M2 - principal lunar semidiurnal
+    [30.000000, 0.33, -56],     // S2 - principal solar semidiurnal (reduced amp for Solent double-HW)
+    [28.439730, 0.20,  53],     // N2 - larger lunar elliptic
     [15.041069, 0.08, 140],     // K1 - luni-solar diurnal
     [13.943036, 0.07, 165],     // O1 - principal lunar diurnal
-    [57.968208, 0.15, 180],     // M4 - shallow water (double HW)
-    [58.984104, 0.06, 195],     // MS4 - shallow water compound
+    [57.968208, 0.15, 249],     // M4 - shallow water (double HW)
+    [58.984104, 0.06, 128],     // MS4 - shallow water compound
   ];
 
   const DEG2RAD = Math.PI / 180;

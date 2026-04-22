@@ -10,6 +10,8 @@
 | Thu 17 Apr 2026 | 15:40 | 3.0 | Inlet just passable in shoes |
 | Thu 17 Apr 2026 | ~15:58 | 4.5 | Good beach, well past inlet |
 | Sat 18 Apr 2026 | 16:55 | 4.7 | Long walk possible, app showed 4.1 (model was too conservative) |
+| Sun 20 Apr 2026 | 15:54 | 1.25 | App showed 1.9 |
+| Tue 22 Apr 2026 | 08:08 | 5.0 | Definite 5 stars, can go a long way. App showed 3.6 |
 
 ## Key Thresholds
 
@@ -62,3 +64,9 @@
 - New data point: Sat 18 Apr 16:55 at 1.628m → 4.7 stars (was showing 4.1)
 - Change: linear lower zone now steeper (shorter 2.15→1.55m range vs 2.15→1.2m)
 - All 5 calibration points within ~0.15 stars
+
+### v5 (multi-constituent recalibration, 22 Apr 2026)
+- Two new data points: Sun 20 Apr 15:54 (1.25 stars, app showed 1.9) and Tue 22 Apr 08:08 (5 stars, app showed 3.6)
+- Root cause: model's spring-neap cycle too pronounced — S2 amplitude over-estimated for Solent double-HW system, overtide phases wrong
+- Changes: REF_MS −5 min (10:24 → 10:19 UTC); S2 amp 0.40→0.33, phase −12→−56; N2 amp 0.22→0.20, phase 28→53; M4 phase 180→249; MS4 phase 195→128
+- All 7 calibration points within ±0.15 stars; Apr 17 HW timing ~25 min error (was 8 min in v2)
