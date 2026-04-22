@@ -10,6 +10,8 @@
 | Thu 17 Apr 2026 | 15:40 | 3.0 | Inlet just passable in shoes |
 | Thu 17 Apr 2026 | ~15:58 | 4.5 | Good beach, well past inlet |
 | Sat 18 Apr 2026 | 16:55 | 4.7 | Long walk possible, app showed 4.1 (model was too conservative) |
+| Sun 20 Apr 2026 | 15:54 | 1.25 | Almost no beach, app showed 1.9 (model too optimistic near HW) |
+| Tue 22 Apr 2026 | 08:08 | 5.0 | Long walk, app showed 3.6 — spring-neap drift caused model to be ~85 min late |
 
 ## Key Thresholds
 
@@ -62,3 +64,9 @@
 - New data point: Sat 18 Apr 16:55 at 1.628m → 4.7 stars (was showing 4.1)
 - Change: linear lower zone now steeper (shorter 2.15→1.55m range vs 2.15→1.2m)
 - All 5 calibration points within ~0.15 stars
+
+### v5 (spring-neap phase recalibration)
+- New data point: Tue 22 Apr 08:08 BST → 5 stars but app showed 3.6 (model ~85 min late)
+- Root cause: S2 (solar semidiurnal) phase was wrong, causing timing drift over the spring-neap cycle
+- Fix: REF_MS shifted -20 min (10:24 → 10:04 UTC) + S2 phase changed from -12° to -64°
+- All 8 calibration points within ±0.46 stars (most within ±0.22)
