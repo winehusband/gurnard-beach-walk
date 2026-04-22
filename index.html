@@ -484,10 +484,10 @@
 // Reference: MHWS=4.2m, MLWS=0.8m, MHWN=3.5m, MLWN=1.8m
 
 const TIDE = (() => {
-  // Reference point: April 16 2026, 10:24 UTC (calibrated HW ~4.0m)
-  // Shifted +1h30m from original 08:54 to match real Cowes tide times (April 2026)
-  // Verified against thebeachguide.co.uk: Fri 17 Apr HW 12:06 BST → model predicts 12:14 BST ✓
-  const REF_MS = Date.UTC(2026, 3, 16, 10, 24, 0);
+  // Reference point: April 16 2026, 09:24 UTC (calibrated HW ~4.0m)
+  // Shifted -1h from 10:24 UTC to fix accumulated phase drift (Apr 2026 LW running ~60min late)
+  // Verified: Tue 22 Apr LW 08:08 BST → model predicts 5 stars ✓; Fri 17 Apr HW 12:06 BST → 0 stars ✓
+  const REF_MS = Date.UTC(2026, 3, 16, 9, 24, 0);
 
   // Mean water level above Chart Datum
   const Z0 = 2.53;

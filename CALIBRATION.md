@@ -10,6 +10,8 @@
 | Thu 17 Apr 2026 | 15:40 | 3.0 | Inlet just passable in shoes |
 | Thu 17 Apr 2026 | ~15:58 | 4.5 | Good beach, well past inlet |
 | Sat 18 Apr 2026 | 16:55 | 4.7 | Long walk possible, app showed 4.1 (model was too conservative) |
+| Sun 20 Apr 2026 | 15:54 | 1.25 | App showed 1.9 |
+| Tue 22 Apr 2026 | 08:08 | 5.0 | Definite 5 stars, long walk. App showed 3.6 |
 
 ## Key Thresholds
 
@@ -62,3 +64,8 @@
 - New data point: Sat 18 Apr 16:55 at 1.628m → 4.7 stars (was showing 4.1)
 - Change: linear lower zone now steeper (shorter 2.15→1.55m range vs 2.15→1.2m)
 - All 5 calibration points within ~0.15 stars
+
+### v5 (phase drift correction)
+- REF_MS shifted backward by ~60min (10:24 UTC → 09:24 UTC) to fix accumulated phase drift
+- Observed: Tue 22 Apr 08:08 BST was a definite 5-star walk; app was showing 3.6 (LW ~60min late)
+- After fix: model predicts 1.524m (5 stars) at 08:08 BST Apr 22 ✓; Apr 17 HW still 0 stars ✓
