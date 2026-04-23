@@ -587,7 +587,7 @@ const RATING = (() => {
     if (height > INLET) {
       // Short beach zone: rapid beach exposure near HW
       const x = (HIGH - height) / (HIGH - INLET);
-      return 2.5 * Math.pow(x, 0.17);
+      return 2.5 * Math.pow(x, 1.5);
     } else {
       // Full walk zone: linear 3 → 5
       return 3 + 2 * (INLET - height) / (INLET - LOW);
