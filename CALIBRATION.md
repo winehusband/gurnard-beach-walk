@@ -70,3 +70,12 @@
 - Root cause: S2 (solar semidiurnal) phase was wrong, causing timing drift over the spring-neap cycle
 - Fix: REF_MS shifted -20 min (10:24 → 10:04 UTC) + S2 phase changed from -12° to -64°
 - All 8 calibration points within ±0.46 stars (most within ±0.22)
+
+### v6 (UK Admiralty API migration — Apr 2026)
+- Replaced harmonic model as primary source with real tidal event data from the UK Admiralty API
+- Station: Cowes (ID 0060), via a Supabase Edge Function proxy (tide-proxy on CoPilot_Diagnostic project)
+- Client uses cosine interpolation between consecutive HW/LW events for smooth height estimation
+- Harmonic model (v5) retained as automatic fallback if API is unavailable or returns no data
+- A "~ est." badge appears in the UI when falling back to the harmonic model
+- API response cached in localStorage for 1 hour to stay within the 10,000 req/month free tier limit
+- Rating thresholds (INLET=2.15m, HIGH=3.8m, LOW=1.55m) and scoring curves unchanged
