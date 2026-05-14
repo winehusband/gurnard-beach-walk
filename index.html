@@ -580,17 +580,25 @@ const RATING = (() => {
   const INLET = 2.15;  // inlet threshold — step jump from ~2.5 → 3.0 stars
   const LOW   = 1.55;  // 5 stars below — perfect conditions
 
-  function stars(height) {
-    if (height >= HIGH) return 0;
-    if (height <= LOW)  return 5;
-    if (height > INLET) {
+  function stars(h, rate) {
+    if (h >= HIGH) return 0;
+    if (h <= LOW)  return 5;
+    let stars;
+    if (h > INLET) {
       // Short beach zone: rapid beach exposure near HW
-      const x = (HIGH - height) / (HIGH - INLET);
-      return 2.5 * Math.pow(x, 0.6);
+      const x = (HIGH - h) / (HIGH - INLET);
+      stars = 2.5 * Math.pow(x, 0.6);
     } else {
       // Full walk zone: linear 3 → 5
-      return 3 + 2 * (INLET - height) / (INLET - LOW);
+      stars = 3 + 2 * (INLET - h) / (INLET - LOW);
     }
+    // Rising tide penalty — inlet floods before main beach
+    if (rate > 0 && stars > 3.0) {
+      const proximity = Math.max(0, Math.min(1, (h - 1.0) / (2.15 - 1.0)));
+      const penalty = 2.0 * Math.pow(proximity, 1.5);
+      stars = Math.max(3.0, stars - penalty);
+    }
+    return stars;
   }
 
   // verdict(s, isRising) — direction-aware safety messaging
@@ -788,7 +796,7 @@ function HIGH_CUTOFF() { return 3.8; }
 function update(date) {
   const h = TIDE.height(date);
   const r = TIDE.rate(date);
-  const s = RATING.stars(h);
+  const s = RATING.stars(h, r);
   const v = RATING.verdict(s, r > 0.05);
 
   // Rating
@@ -854,7 +862,7 @@ function update(date) {
 function findNextGreatWalk(fromDate) {
   const el = document.getElementById('nextWalkCard');
   const currentHeight = TIDE.height(fromDate);
-  const currentStars = RATING.stars(currentHeight);
+  const currentStars = RATING.stars(currentHeight, TIDE.rate(fromDate));
 
   // If already in a great window (4+ stars), the best time is now.
   if (currentStars >= 4) {
@@ -871,7 +879,7 @@ function findNextGreatWalk(fromDate) {
   const extremes = TIDE.findExtremes(fromDate, 72);
   for (const ex of extremes) {
     if (ex.type !== 'low') continue;
-    const lowStars = RATING.stars(ex.height);
+    const lowStars = RATING.stars(ex.height, TIDE.rate(ex.time));
     if (lowStars >= 4) {
       document.getElementById('nextWalkTime').textContent =
         formatDate(ex.time) + ' at ' + formatTime(ex.time);

@@ -12,6 +12,7 @@
 | Sat 18 Apr 2026 | 16:55 | 4.7 | Long walk possible, app showed 4.1 (model was too conservative) |
 | Sun 20 Apr 2026 | 15:54 | 1.25 | Almost no beach, app showed 1.9 (model too optimistic near HW) |
 | Tue 22 Apr 2026 | 08:08 | 5.0 | Long walk, app showed 3.6 — spring-neap drift caused model to be ~85 min late |
+| Wed 14 May 2026 | 17:32 | 3.0 | App showed 5.0. Inlet nearly closed despite low tide. Rising tide floods inlet before main beach. |
 
 ## Key Thresholds
 
