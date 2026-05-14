@@ -569,10 +569,9 @@ const RATING = (() => {
   //
   // Two zones separated by a step at the inlet threshold:
   //   UPPER zone (inlet blocked): power curve 0→2.5 stars, HIGH→INLET
-  //     Beach appears very rapidly near HW on a gentle slope, so a power
-  //     curve (exponent 0.17) is used rather than linear to match observed
-  //     fast beach exposure. At 3.717m (just 83mm below no-beach cutoff)
-  //     you already get 1.5 stars — linear would give only 0.1 stars.
+  //     Power curve (exponent 0.6) used rather than linear, gives a slightly
+  //     concave rise so beach exposure feels gradual just below HW and accelerates
+  //     toward the inlet threshold.
   //   LOWER zone (inlet clear): linear 3→5 stars, INLET→LOW
   //     Step of 0.5 stars at the inlet threshold reflects the walk
   //     transforming from "limited" to "full beach access."
@@ -587,7 +586,7 @@ const RATING = (() => {
     if (height > INLET) {
       // Short beach zone: rapid beach exposure near HW
       const x = (HIGH - height) / (HIGH - INLET);
-      return 2.5 * Math.pow(x, 0.17);
+      return 2.5 * Math.pow(x, 0.6);
     } else {
       // Full walk zone: linear 3 → 5
       return 3 + 2 * (INLET - height) / (INLET - LOW);
@@ -853,36 +852,39 @@ function update(date) {
 }
 
 function findNextGreatWalk(fromDate) {
-  // Scan ahead to find the next period with 4+ stars
-  const step = 15 * 60000; // 15 min steps
-  const maxSearch = 72 * 3600000; // 3 days ahead
+  const el = document.getElementById('nextWalkCard');
+  const currentHeight = TIDE.height(fromDate);
+  const currentStars = RATING.stars(currentHeight);
 
-  let bestStart = null;
-  let bestRating = 0;
+  // If already in a great window (4+ stars), the best time is now.
+  if (currentStars >= 4) {
+    document.getElementById('nextWalkTime').textContent = 'Right now!';
+    document.getElementById('nextWalkDetail').textContent = 'Beach is great — go walk!';
+    document.getElementById('nextWalkStars').textContent =
+      '★'.repeat(Math.round(currentStars)) + ' (' + currentStars.toFixed(1) + ')';
+    el.style.display = 'block';
+    return;
+  }
 
-  for (let t = fromDate.getTime(); t < fromDate.getTime() + maxSearch; t += step) {
-    const d = new Date(t);
-    const h = TIDE.height(d);
-    const s = RATING.stars(h);
-
-    if (s >= 4 && t > fromDate.getTime() + step) {
-      if (!bestStart || s > bestRating) {
-        bestStart = d;
-        bestRating = s;
-      }
-      if (s >= 4.8) break; // Found a great one, stop
+  // Otherwise, the next good window peaks at the next low tide. Find the
+  // first upcoming low whose rating is >= 4 (look ahead 72 hours).
+  const extremes = TIDE.findExtremes(fromDate, 72);
+  for (const ex of extremes) {
+    if (ex.type !== 'low') continue;
+    const lowStars = RATING.stars(ex.height);
+    if (lowStars >= 4) {
+      document.getElementById('nextWalkTime').textContent =
+        formatDate(ex.time) + ' at ' + formatTime(ex.time);
+      document.getElementById('nextWalkDetail').textContent =
+        RATING.verdict(lowStars, false).desc;
+      document.getElementById('nextWalkStars').textContent =
+        '★'.repeat(Math.round(lowStars)) + ' (' + lowStars.toFixed(1) + ')';
+      el.style.display = 'block';
+      return;
     }
   }
 
-  const el = document.getElementById('nextWalkCard');
-  if (bestStart) {
-    document.getElementById('nextWalkTime').textContent = formatDate(bestStart) + ' at ' + formatTime(bestStart);
-    document.getElementById('nextWalkDetail').textContent = RATING.verdict(bestRating).desc;
-    document.getElementById('nextWalkStars').textContent = '★'.repeat(Math.round(bestRating)) + ' (' + bestRating.toFixed(1) + ')';
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
+  el.style.display = 'none';
 }
 
 // === INIT ===
