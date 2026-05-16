@@ -367,6 +367,83 @@
     margin-top: 4px;
   }
 
+  /* === WALK WINDOW + RAIN OVERLAY === */
+  .walk-window-meta {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 6px;
+    letter-spacing: 0.3px;
+  }
+  .rain-strip-wrap {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(12,45,72,0.08);
+    display: none;
+  }
+  .rain-strip-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .rain-strip-times {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-light);
+    margin-bottom: 4px;
+    padding: 0 2px;
+  }
+  .rain-strip {
+    display: flex;
+    gap: 2px;
+    margin: 0 auto;
+    max-width: 100%;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .rain-block {
+    flex: 1 1 0;
+    height: 22px;
+    border-radius: 2px;
+    min-width: 8px;
+  }
+  .rain-block.clear { background: var(--star-gold); opacity: 0.55; }
+  .rain-block.light { background: var(--foam); border: 1px solid rgba(46,134,171,0.4); }
+  .rain-block.rain  { background: var(--ocean-light); }
+  .rain-block.heavy { background: var(--ocean-deep); }
+  .rain-best-band {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--seafoam);
+    text-align: center;
+    font-weight: 500;
+  }
+  .rain-strip-legend {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 10px;
+    font-size: 10px;
+    color: var(--text-light);
+    flex-wrap: wrap;
+  }
+  .rain-strip-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .rain-strip-legend .dot {
+    width: 9px; height: 9px; border-radius: 2px;
+  }
+  .rain-strip-legend .dot.clear { background: var(--star-gold); opacity: 0.55; }
+  .rain-strip-legend .dot.light { background: var(--foam); border: 1px solid rgba(46,134,171,0.4); }
+  .rain-strip-legend .dot.rain  { background: var(--ocean-light); }
+  .rain-strip-legend .dot.heavy { background: var(--ocean-deep); }
+
   /* === VIEWING LABEL === */
   .viewing-label {
     text-align: center;
@@ -459,6 +536,19 @@
     <div class="next-walk-time" id="nextWalkTime"></div>
     <div class="next-walk-detail" id="nextWalkDetail"></div>
     <div class="next-walk-stars" id="nextWalkStars"></div>
+    <div class="walk-window-meta" id="walkWindowMeta"></div>
+    <div class="rain-strip-wrap" id="rainStripWrap">
+      <div class="rain-strip-label">Rain in this window</div>
+      <div class="rain-strip-times" id="rainStripTimes"></div>
+      <div class="rain-strip" id="rainStrip"></div>
+      <div class="rain-best-band" id="rainBestBand"></div>
+      <div class="rain-strip-legend">
+        <span><span class="dot clear"></span>Clear</span>
+        <span><span class="dot light"></span>Light</span>
+        <span><span class="dot rain"></span>Rain</span>
+        <span><span class="dot heavy"></span>Heavy</span>
+      </div>
+    </div>
   </div>
 
   <div class="card picker-card">
@@ -910,8 +1000,8 @@ function update(date) {
   // Tide curve
   renderTideCurve(date);
 
-  // Next great walk (4+ stars)
-  findNextGreatWalk(date);
+  // Next great walk window (3.0 falling → 3.5 rising) + rain overlay
+  renderWalkWindow(date);
 
   // Viewing label
   const label = document.getElementById('viewingLabel');
@@ -925,49 +1015,227 @@ function update(date) {
   }
 }
 
-function findNextGreatWalk(fromDate) {
-  const el = document.getElementById('nextWalkCard');
-  // Use the API-first wrappers so the "right now" determination uses
-  // real Admiralty data when available, matching the main view above.
-  const currentHeight = tideHeight(fromDate);
-  const currentStars = RATING.stars(currentHeight, tideRate(fromDate));
+// =========================================
+// WALK WINDOW + RAIN OVERLAY
+// =========================================
+// findWalkWindow scans forward from `fromDate` and returns the next continuous
+// "go" band, or null if no window in the next 24h. Thresholds chosen with
+// Hamish from real walk experience (16 May 2026):
+//   ENTRY = 3.0 stars on a FALLING tide (inlet just opens, beach growing)
+//   EXIT  = 3.5 stars on a RISING tide (asymmetric — rising-tide-stuck is the
+//           dangerous edge so we exit earlier than we entered)
+// If we're already inside a window now, returns it with currentlyInside: true
+// and start = fromDate.
+function findWalkWindow(fromDate, maxHoursAhead) {
+  const ENTRY_STARS = 3.0;
+  const EXIT_STARS  = 3.5;
+  const step = 5 * 60000; // 5 minutes
+  const startMs = fromDate.getTime();
+  const endMs = startMs + (maxHoursAhead || 24) * 3600000;
 
-  // If already in a great window (4+ stars), the best time is now.
-  if (currentStars >= 4) {
-    document.getElementById('nextWalkTime').textContent = 'Right now!';
-    document.getElementById('nextWalkDetail').textContent = 'Beach is great — go walk!';
-    document.getElementById('nextWalkStars').textContent =
-      '★'.repeat(Math.round(currentStars)) + ' (' + currentStars.toFixed(1) + ')';
-    el.style.display = 'block';
-    return;
-  }
+  // Are we currently inside a good window?
+  const currentH = tideHeight(fromDate);
+  const currentR = tideRate(fromDate);
+  const currentStars = RATING.stars(currentH, currentR);
+  const insideNow =
+    (currentR <= 0 && currentStars >= ENTRY_STARS) ||
+    (currentR > 0 && currentStars >= EXIT_STARS);
 
-  // Otherwise, the next good window peaks at the next low tide. Find the
-  // first upcoming low whose rating is >= 4 (look ahead 72 hours). This is
-  // main's fixed algorithm (commit 8fe45ed) — it correctly anchors on the
-  // next actual low extreme rather than scanning at fixed steps which could
-  // pick a future time that was actually WORSE than now.
-  // Note: TIDE.findExtremes uses the harmonic model to predict when lows
-  // occur (no equivalent Admiralty-driven extreme-finder yet) — future
-  // improvement would be to read HighWater/LowWater events directly from
-  // apiTideEvents when available.
-  const extremes = TIDE.findExtremes(fromDate, 72);
-  for (const ex of extremes) {
-    if (ex.type !== 'low') continue;
-    const lowStars = RATING.stars(ex.height, TIDE.rate(ex.time));
-    if (lowStars >= 4) {
-      document.getElementById('nextWalkTime').textContent =
-        formatDate(ex.time) + ' at ' + formatTime(ex.time);
-      document.getElementById('nextWalkDetail').textContent =
-        RATING.verdict(lowStars, false).desc;
-      document.getElementById('nextWalkStars').textContent =
-        '★'.repeat(Math.round(lowStars)) + ' (' + lowStars.toFixed(1) + ')';
-      el.style.display = 'block';
-      return;
+  let windowStart = insideNow ? fromDate : null;
+  let windowEnd = null;
+  let peakTime = insideNow ? fromDate : null;
+  let peakStars = insideNow ? currentStars : 0;
+
+  for (let t = startMs + step; t < endMs; t += step) {
+    const d = new Date(t);
+    const h = tideHeight(d);
+    const r = tideRate(d);
+    const s = RATING.stars(h, r);
+
+    if (!windowStart) {
+      // Looking for entry: falling tide that reaches ENTRY_STARS
+      if (r <= 0 && s >= ENTRY_STARS) {
+        windowStart = d;
+        peakTime = d;
+        peakStars = s;
+      }
+    } else {
+      // Inside a window — track peak, watch for exit
+      if (s > peakStars) {
+        peakStars = s;
+        peakTime = d;
+      }
+      // Exit condition: rising tide drops below EXIT_STARS
+      if (r > 0 && s < EXIT_STARS) {
+        windowEnd = d;
+        break;
+      }
     }
   }
 
-  el.style.display = 'none';
+  if (!windowStart) return null;
+  if (!windowEnd) windowEnd = new Date(endMs); // window extends past horizon
+
+  return { start: windowStart, end: windowEnd, peakTime, peakStars, currentlyInside: insideNow };
+}
+
+// fetchRainForecast pulls 15-minute precipitation from OpenMeteo (free, no key)
+// for Gurnard Beach (50.764, -1.321). Cached in localStorage for 30 minutes so
+// we don't hit the API on every render. Returns array of {time: ms, mm: number}
+// or null on failure (caller is expected to fail gracefully — no rain strip
+// shown, the walk window display still works).
+const RAIN_CACHE_KEY = 'gurnard_rain_cache_v1';
+const RAIN_CACHE_TTL = 30 * 60000;
+async function fetchRainForecast() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(RAIN_CACHE_KEY) || 'null');
+    if (cached && (Date.now() - cached.ts) < RAIN_CACHE_TTL) return cached.slots;
+  } catch (e) {}
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast' +
+      '?latitude=50.764&longitude=-1.321' +
+      '&minutely_15=precipitation&forecast_days=2&timezone=auto';
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (!data.minutely_15 || !Array.isArray(data.minutely_15.time)) {
+      throw new Error('Unexpected response shape');
+    }
+    const times = data.minutely_15.time;
+    const precip = data.minutely_15.precipitation;
+    const slots = times.map((t, i) => ({ time: new Date(t).getTime(), mm: precip[i] || 0 }));
+    localStorage.setItem(RAIN_CACHE_KEY, JSON.stringify({ ts: Date.now(), slots }));
+    return slots;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Met Office-ish thresholds, translated to mm-per-15-minute.
+function bucketRain(mm) {
+  if (mm === 0)    return 'clear';
+  if (mm < 0.25)   return 'light';   // <1 mm/hr
+  if (mm < 0.75)   return 'rain';    // ~1-3 mm/hr
+  return 'heavy';                    // >3 mm/hr
+}
+
+// Find the longest contiguous run of clear/light slots inside the window and
+// surface it as a "best sub-window" label.
+function findBestRainBand(slots) {
+  if (!slots || slots.length === 0) return null;
+  const scores = slots.map(s => (s.bucket === 'clear' || s.bucket === 'light') ? 1 : 0);
+  let bestStart = -1, bestLen = 0, curStart = -1, curLen = 0;
+  for (let i = 0; i < scores.length; i++) {
+    if (scores[i] === 1) {
+      if (curStart === -1) curStart = i;
+      curLen++;
+      if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; }
+    } else {
+      curStart = -1; curLen = 0;
+    }
+  }
+  if (bestLen < 2) return null; // require at least 30 min of decent weather
+  if (bestLen === slots.length) return { whole: true };
+  return {
+    whole: false,
+    start: new Date(slots[bestStart].time),
+    end: new Date(slots[bestStart + bestLen - 1].time + 15 * 60000)
+  };
+}
+
+function renderRainStrip(window, rainSlots) {
+  const wrap = document.getElementById('rainStripWrap');
+  const strip = document.getElementById('rainStrip');
+  const times = document.getElementById('rainStripTimes');
+  const bestEl = document.getElementById('rainBestBand');
+
+  if (!wrap || !strip || !rainSlots || !window) {
+    if (wrap) wrap.style.display = 'none';
+    return;
+  }
+
+  const inWindow = rainSlots
+    .filter(s => s.time >= window.start.getTime() && s.time < window.end.getTime())
+    .map(s => ({ ...s, bucket: bucketRain(s.mm) }));
+
+  if (inWindow.length === 0) {
+    wrap.style.display = 'none';
+    return;
+  }
+
+  strip.innerHTML = inWindow.map(s => {
+    const t = new Date(s.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    return '<div class="rain-block ' + s.bucket + '" title="' + t + ' — ' + s.bucket + ' (' + s.mm.toFixed(2) + 'mm)"></div>';
+  }).join('');
+
+  // Start/end time labels on the strip
+  const fmt = (d) => new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  times.innerHTML = '<span>' + fmt(inWindow[0].time) + '</span><span>' + fmt(inWindow[inWindow.length - 1].time + 15 * 60000) + '</span>';
+
+  // Best-sub-window label
+  const best = findBestRainBand(inWindow);
+  if (best && best.whole) {
+    bestEl.textContent = '✓ Whole window is clear or light';
+  } else if (best) {
+    bestEl.textContent = 'Best stretch: ' + fmt(best.start) + ' → ' + fmt(best.end);
+  } else {
+    bestEl.textContent = 'Wet throughout — pick your moment';
+  }
+
+  wrap.style.display = 'block';
+}
+
+// renderWalkWindow replaces the old findNextGreatWalk display. Shows the full
+// "go" band (entry-to-exit) instead of just the single peak moment, and
+// triggers an async rain overlay fetch.
+function renderWalkWindow(fromDate) {
+  const card = document.getElementById('nextWalkCard');
+  const timeEl = document.getElementById('nextWalkTime');
+  const detailEl = document.getElementById('nextWalkDetail');
+  const starsEl = document.getElementById('nextWalkStars');
+  const metaEl = document.getElementById('walkWindowMeta');
+  const rainWrap = document.getElementById('rainStripWrap');
+
+  const win = findWalkWindow(fromDate, 24);
+
+  if (!win) {
+    // No window in next 24h — look further (just for the headline message)
+    timeEl.textContent = 'No walks in the next 24 hours';
+    detailEl.textContent = 'Tide windows aren\'t lining up — check back tomorrow.';
+    starsEl.textContent = '';
+    if (metaEl) metaEl.textContent = '';
+    if (rainWrap) rainWrap.style.display = 'none';
+    card.style.display = 'block';
+    return;
+  }
+
+  const startTime = formatTime(win.start);
+  const endTime = formatTime(win.end);
+  const peakTime = formatTime(win.peakTime);
+  const startDate = formatDate(win.start);
+  const durMin = (win.end.getTime() - win.start.getTime()) / 60000;
+  const durStr = durMin < 60
+    ? Math.round(durMin) + ' min'
+    : (durMin / 60).toFixed(1) + ' hrs';
+
+  if (win.currentlyInside) {
+    timeEl.textContent = 'GO NOW';
+    detailEl.textContent = 'Window ends at ' + endTime;
+  } else {
+    const dateLabel = startDate === 'Today' ? 'Today' : startDate;
+    timeEl.textContent = dateLabel + ', ' + startTime + ' → ' + endTime;
+    detailEl.textContent = 'Peak ' + win.peakStars.toFixed(1) + '★ at ' + peakTime;
+  }
+
+  starsEl.textContent = '★'.repeat(Math.round(win.peakStars)) + ' (' + win.peakStars.toFixed(1) + ')';
+  if (metaEl) metaEl.textContent = 'Window length: ' + durStr;
+
+  card.style.display = 'block';
+
+  // Async fetch rain (cached 30 min) — render strip when ready, do nothing if it fails.
+  fetchRainForecast().then(slots => {
+    if (slots) renderRainStrip(win, slots);
+  });
 }
 
 // === INIT ===
