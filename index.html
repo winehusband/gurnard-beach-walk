@@ -430,6 +430,7 @@
       <div class="tide-state">
         <span class="tide-state-arrow" id="tideArrow"></span>
         <span class="tide-state-text" id="tideStateText"></span>
+        <span id="dataBadge" style="display:none;margin-left:6px;font-size:10px;color:#a0aab4;font-style:italic">~ est.</span>
       </div>
     </div>
     <div class="tide-next-events">
@@ -470,7 +471,7 @@
   </div>
 
   <div class="disclaimer">
-    Tidal predictions are approximate, based on harmonic analysis for Cowes.<br>
+    Tidal data from UK Admiralty API (Cowes, station 0060) where available; harmonic model as fallback.<br>
     Not for navigation. Always check conditions on arrival.
   </div>
 </div>
@@ -642,6 +643,63 @@ const RATING = (() => {
 let currentViewDate = null; // null = live/now mode
 let liveTimer = null;
 
+// =========================================
+// ADMIRALTY API INTEGRATION
+// =========================================
+let apiTideEvents = null; // null = not yet loaded or failed
+
+const EDGE_FN_URL = 'https://gsucaxeqzluzbmvonsmj.supabase.co/functions/v1/tide-proxy';
+const CACHE_KEY = 'gurnard_tide_cache';
+const CACHE_TTL = 3600000; // 1 hour
+
+async function fetchTideEvents() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (cached && (Date.now() - cached.ts) < CACHE_TTL) return cached.events;
+  } catch (e) {}
+  try {
+    const resp = await fetch(EDGE_FN_URL + '?days=3');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const events = await resp.json();
+    if (!Array.isArray(events)) throw new Error('Unexpected response');
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), events }));
+    return events;
+  } catch (e) {
+    return null;
+  }
+}
+
+function parseEventMs(dt) {
+  // Admiralty API returns UTC without 'Z' — normalise to avoid local-time parse
+  return /[Zz]$|[+-]\d{2}:\d{2}$/.test(dt) ? new Date(dt).getTime() : new Date(dt + 'Z').getTime();
+}
+
+function apiHeight(date) {
+  if (!apiTideEvents || apiTideEvents.length < 2) return null;
+  const t = date.getTime();
+  for (let i = 0; i < apiTideEvents.length - 1; i++) {
+    const t0 = parseEventMs(apiTideEvents[i].DateTime);
+    const t1 = parseEventMs(apiTideEvents[i + 1].DateTime);
+    if (t >= t0 && t <= t1) {
+      const h0 = apiTideEvents[i].Height;
+      const h1 = apiTideEvents[i + 1].Height;
+      const frac = (t - t0) / (t1 - t0);
+      return (h0 + h1) / 2 + (h0 - h1) / 2 * Math.cos(Math.PI * frac);
+    }
+  }
+  return null;
+}
+
+function tideHeight(date) {
+  const h = apiHeight(date);
+  return h !== null ? h : TIDE.height(date);
+}
+
+function tideRate(date) {
+  const dt = 60000;
+  return (tideHeight(new Date(date.getTime() + dt)) - tideHeight(new Date(date.getTime() - dt))) / (2 * dt / 3600000);
+}
+
 function formatTime(date) {
   return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
@@ -706,7 +764,7 @@ function renderTideCurve(viewDate) {
   const points = [];
   let minH = 99, maxH = -99;
   for (let t = dayStart.getTime(); t <= dayEnd.getTime(); t += 900000) {
-    const h = TIDE.height(new Date(t));
+    const h = tideHeight(new Date(t));
     points.push({ t, h });
     if (h < minH) minH = h;
     if (h > maxH) maxH = h;
@@ -734,7 +792,7 @@ function renderTideCurve(viewDate) {
   // Current time marker
   const nowT = viewDate.getTime();
   const nowInDay = nowT >= dayStart.getTime() && nowT <= dayEnd.getTime();
-  const nowH = TIDE.height(viewDate);
+  const nowH = tideHeight(viewDate);
 
   // Rating color zones (background)
   const zones = [
@@ -794,8 +852,16 @@ function LOW_CUTOFF() { return 1.55; }
 function HIGH_CUTOFF() { return 3.8; }
 
 function update(date) {
-  const h = TIDE.height(date);
-  const r = TIDE.rate(date);
+  // tideHeight/tideRate are API-first wrappers (Admiralty real data, falling back
+  // to the harmonic model if the proxy is unavailable). RATING.stars takes both
+  // h AND r so the rising-tide penalty (added in commit fe14cb9) kicks in correctly.
+  const h = tideHeight(date);
+  const r = tideRate(date);
+
+  // Show "~ est." badge when we're on the harmonic-model fallback
+  const badge = document.getElementById('dataBadge');
+  if (badge) badge.style.display = apiHeight(date) !== null ? 'none' : 'inline';
+
   const s = RATING.stars(h, r);
   const v = RATING.verdict(s, r > 0.05);
 
@@ -861,8 +927,10 @@ function update(date) {
 
 function findNextGreatWalk(fromDate) {
   const el = document.getElementById('nextWalkCard');
-  const currentHeight = TIDE.height(fromDate);
-  const currentStars = RATING.stars(currentHeight, TIDE.rate(fromDate));
+  // Use the API-first wrappers so the "right now" determination uses
+  // real Admiralty data when available, matching the main view above.
+  const currentHeight = tideHeight(fromDate);
+  const currentStars = RATING.stars(currentHeight, tideRate(fromDate));
 
   // If already in a great window (4+ stars), the best time is now.
   if (currentStars >= 4) {
@@ -875,7 +943,14 @@ function findNextGreatWalk(fromDate) {
   }
 
   // Otherwise, the next good window peaks at the next low tide. Find the
-  // first upcoming low whose rating is >= 4 (look ahead 72 hours).
+  // first upcoming low whose rating is >= 4 (look ahead 72 hours). This is
+  // main's fixed algorithm (commit 8fe45ed) — it correctly anchors on the
+  // next actual low extreme rather than scanning at fixed steps which could
+  // pick a future time that was actually WORSE than now.
+  // Note: TIDE.findExtremes uses the harmonic model to predict when lows
+  // occur (no equivalent Admiralty-driven extreme-finder yet) — future
+  // improvement would be to read HighWater/LowWater events directly from
+  // apiTideEvents when available.
   const extremes = TIDE.findExtremes(fromDate, 72);
   for (const ex of extremes) {
     if (ex.type !== 'low') continue;
@@ -922,8 +997,14 @@ const pad = n => n.toString().padStart(2, '0');
 document.getElementById('dateTimePicker').value =
   `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-// Go!
+// Go! Start immediately with harmonic model, then upgrade to real API data
 startLive();
+fetchTideEvents().then(events => {
+  if (events && Array.isArray(events) && events.length > 0) {
+    apiTideEvents = events;
+    update(currentViewDate || new Date());
+  }
+});
 </script>
 </body>
 </html>
