@@ -88,3 +88,12 @@
 - Next high/low tide cards now prefer Admiralty API events when available instead of always using the harmonic fallback
 - Visible data status added so users can tell live API data from backup estimates
 - Core rating, interpolation, event selection, walk-window, and config logic covered by Node tests
+
+### v8 (Isle of Wight beach picker — May 2026)
+- Expanded `beaches.json` from Gurnard-only to 20 Isle of Wight dog-walk beach choices
+- Added beach dropdown, simple island map pins, per-beach dog-rule notices, and saved default beach support via `localStorage`
+- URL parameter `?beach=<id>` still overrides the saved default, making individual beach links shareable
+- Dog access rules are based on Isle of Wight Council PSPO/current dog beach guidance: seasonal restrictions run from 1 May to 30 September on named exclusion beaches
+- Added additional UKHO/Admiralty station IDs for West Wight, Ventnor, Sandown, Bembridge, Ryde, and Cowes coverage
+- Gurnard remains the only fully field-calibrated rating threshold; other beaches carry estimated thresholds and visible confidence notes until local observations are collected
+- Added browser smoke coverage for beach picker rendering, map pins, URL beach selection, and default beach behaviour

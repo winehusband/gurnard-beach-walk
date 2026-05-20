@@ -181,11 +181,10 @@
   }
 
   function normalizeBeachConfig(config, requestedId) {
-    if (!config || !Array.isArray(config.beaches) || config.beaches.length === 0) {
-      throw new Error('No beaches configured');
-    }
-    const id = requestedId || config.defaultBeachId || config.beaches[0].id;
-    const beach = config.beaches.find((item) => item.id === id) || config.beaches[0];
+    return selectBeachConfig(config, requestedId).beach;
+  }
+
+  function normalizeBeachEntry(beach) {
     if (!beach.stationId || !beach.coordinates) {
       throw new Error('Beach config is missing station or coordinates');
     }
@@ -193,6 +192,107 @@
       ...beach,
       thresholds: { ...DEFAULT_THRESHOLDS, ...(beach.thresholds || {}) },
       copy: { ...(beach.copy || {}) },
+      dogRules: { ...(beach.dogRules || {}) },
+      confidence: { ...(beach.confidence || {}) },
+    };
+  }
+
+  function normalizeBeachCatalog(config) {
+    if (!config || !Array.isArray(config.beaches) || config.beaches.length === 0) {
+      throw new Error('No beaches configured');
+    }
+    return {
+      ...config,
+      defaultBeachId: config.defaultBeachId || config.beaches[0].id,
+      beaches: config.beaches.map(normalizeBeachEntry),
+      sources: Array.isArray(config.sources) ? config.sources : [],
+    };
+  }
+
+  function findBeachById(catalog, id) {
+    if (!id) return null;
+    return catalog.beaches.find((item) => item.id === id) || null;
+  }
+
+  function selectBeachConfig(config, requestedId, savedDefaultId) {
+    const catalog = normalizeBeachCatalog(config);
+    const candidates = [
+      { id: requestedId, source: 'url' },
+      { id: savedDefaultId, source: 'saved' },
+      { id: catalog.defaultBeachId, source: 'config' },
+    ];
+
+    for (const candidate of candidates) {
+      const beach = findBeachById(catalog, candidate.id);
+      if (beach) {
+        return {
+          catalog,
+          beach,
+          source: candidate.source,
+          invalidRequested: Boolean(requestedId && !findBeachById(catalog, requestedId)),
+        };
+      }
+    }
+
+    return {
+      catalog,
+      beach: catalog.beaches[0],
+      source: 'fallback',
+      invalidRequested: Boolean(requestedId),
+    };
+  }
+
+  function monthDayNumber(month, day) {
+    return Number(month) * 100 + Number(day);
+  }
+
+  function isDateInMonthDayRange(date, range) {
+    if (!range) return false;
+    const current = monthDayNumber(date.getMonth() + 1, date.getDate());
+    const start = monthDayNumber(range.startMonth, range.startDay);
+    const end = monthDayNumber(range.endMonth, range.endDay);
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+    if (start <= end) return current >= start && current <= end;
+    return current >= start || current <= end;
+  }
+
+  function isDogRestrictedOnDate(beach, date) {
+    const rules = beach && beach.dogRules;
+    if (!rules || rules.status !== 'seasonal-restriction') return false;
+    return isDateInMonthDayRange(date, rules.restrictionMonths);
+  }
+
+  function dogAccessForDate(beach, date) {
+    const rules = beach && beach.dogRules ? beach.dogRules : {};
+    if (isDogRestrictedOnDate(beach, date)) {
+      return {
+        kind: 'restricted',
+        title: 'Summer dog restriction active',
+        message: rules.summary || 'Seasonal dog restrictions apply here.',
+        detail: rules.detail || '',
+      };
+    }
+    if (rules.status === 'seasonal-restriction') {
+      return {
+        kind: 'allowed',
+        title: 'Dogs allowed outside summer restriction dates',
+        message: 'No seasonal beach exclusion is active today.',
+        detail: rules.detail || '',
+      };
+    }
+    if (rules.status === 'year-round-area') {
+      return {
+        kind: 'partial',
+        title: 'Dog-friendly stretch all year',
+        message: rules.summary || 'Dogs are allowed all year on this signed stretch.',
+        detail: rules.detail || '',
+      };
+    }
+    return {
+      kind: 'allowed',
+      title: 'Dogs allowed all year',
+      message: rules.summary || 'Dogs are allowed all year on this beach.',
+      detail: rules.detail || '',
     };
   }
 
@@ -203,6 +303,11 @@
     apiHeight,
     nextApiEvent,
     findWalkWindow,
+    normalizeBeachCatalog,
     normalizeBeachConfig,
+    selectBeachConfig,
+    isDateInMonthDayRange,
+    isDogRestrictedOnDate,
+    dogAccessForDate,
   };
 });

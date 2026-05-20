@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="apple-touch-icon" href="icon.png">
-<meta property="og:title" content="Gurnard Beach Walk">
-<meta property="og:description" content="Your guide to the Gurnard Beach walk on the Isle of Wight">
+<meta property="og:title" content="Isle of Wight Beach Walk">
+<meta property="og:description" content="Dog-walk tide and weather windows for Isle of Wight beaches">
 <meta property="og:image" content="https://winehusband.github.io/gurnard-beach-walk/icon.png">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0c2d48">
 <link rel="manifest" href="manifest.json">
-<title>Gurnard Beach Walk</title>
+<title>Isle of Wight Beach Walk</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -24,6 +24,20 @@
 <div class="container">
   <div class="viewing-label" id="viewingLabel"></div>
   <div class="data-status" id="dataStatus">Loading live tide data...</div>
+
+  <div class="card beach-picker-card">
+    <div class="beach-picker-head">
+      <h3>Choose Beach</h3>
+      <span class="default-badge" id="defaultBeachBadge"></span>
+    </div>
+    <div class="beach-select-row">
+      <select id="beachSelect" aria-label="Choose Isle of Wight beach"></select>
+      <button class="btn-default" id="btnDefaultBeach" type="button">Set default</button>
+    </div>
+    <div class="beach-map" id="beachMap" aria-label="Isle of Wight beach map"></div>
+    <div class="dog-rule" id="dogRule"></div>
+    <div class="confidence-note" id="confidenceNote"></div>
+  </div>
 
   <div class="card rating-card" id="ratingCard">
     <div class="rating-label">Beach Walkability</div>

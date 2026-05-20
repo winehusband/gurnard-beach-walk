@@ -94,6 +94,16 @@ const FALLBACK_CONFIG = {
     stationName: 'Cowes',
     coordinates: { latitude: 50.764, longitude: -1.321 },
     thresholds: { high: 3.8, inlet: 2.15, low: 1.55 },
+    dogRules: {
+      status: 'seasonal-restriction',
+      summary: 'Seasonal dog exclusion zones apply from 1 May to 30 September.',
+      detail: 'Check the posted Gurnard exclusion-zone map before walking in summer.',
+      restrictionMonths: { startMonth: 5, startDay: 1, endMonth: 9, endDay: 30 },
+    },
+    confidence: {
+      tide: 'Live Cowes tide station where available.',
+      thresholds: 'Calibrated from local Gurnard walk observations.',
+    },
     copy: {
       ratingLabel: 'Beach Walkability',
       nextWalkTitle: 'Next Great Walk',
@@ -102,10 +112,12 @@ const FALLBACK_CONFIG = {
   }],
 };
 
-let currentBeach = CORE.normalizeBeachConfig(FALLBACK_CONFIG);
+let beachCatalog = CORE.normalizeBeachCatalog(FALLBACK_CONFIG);
+let currentBeach = CORE.selectBeachConfig(FALLBACK_CONFIG).beach;
 let RATING = CORE.createRatingModel(currentBeach.thresholds);
 let currentViewDate = null; // null = live/now mode
 let liveTimer = null;
+let tideRequestToken = 0;
 
 // =========================================
 // ADMIRALTY API INTEGRATION
@@ -116,10 +128,40 @@ let tideFetchError = null;
 const EDGE_FN_URL = 'https://gsucaxeqzluzbmvonsmj.supabase.co/functions/v1/tide-proxy';
 const CACHE_TTL = 3600000; // 1 hour
 const BEACH_CONFIG_URL = 'beaches.json';
+const DEFAULT_BEACH_KEY = 'beach_default_id';
+const ISLAND_BOUNDS = {
+  north: 50.775,
+  south: 50.575,
+  west: -1.565,
+  east: -1.075,
+};
 
-function selectedBeachId() {
+function urlBeachId() {
   const params = new URLSearchParams(window.location.search);
   return params.get('beach') || null;
+}
+
+function savedDefaultBeachId() {
+  try {
+    return localStorage.getItem(DEFAULT_BEACH_KEY) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveDefaultBeachId(beachId) {
+  try {
+    localStorage.setItem(DEFAULT_BEACH_KEY, beachId);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function updateUrlBeach(beachId) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('beach', beachId);
+  window.history.replaceState({}, '', url);
 }
 
 async function loadBeachConfig() {
@@ -132,11 +174,113 @@ async function loadBeachConfig() {
   }
 }
 
+function renderBeachOptions() {
+  const select = document.getElementById('beachSelect');
+  if (!select) return;
+
+  select.innerHTML = '';
+  const groups = new Map();
+  for (const beach of beachCatalog.beaches) {
+    const area = beach.area || 'Isle of Wight';
+    if (!groups.has(area)) groups.set(area, []);
+    groups.get(area).push(beach);
+  }
+
+  for (const [area, beaches] of groups.entries()) {
+    const group = document.createElement('optgroup');
+    group.label = area;
+    for (const beach of beaches) {
+      const option = document.createElement('option');
+      option.value = beach.id;
+      option.textContent = beach.shortName || beach.name;
+      group.appendChild(option);
+    }
+    select.appendChild(group);
+  }
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function mapPosition(beach) {
+  const { latitude, longitude } = beach.coordinates;
+  const x = ((longitude - ISLAND_BOUNDS.west) / (ISLAND_BOUNDS.east - ISLAND_BOUNDS.west)) * 100;
+  const y = ((ISLAND_BOUNDS.north - latitude) / (ISLAND_BOUNDS.north - ISLAND_BOUNDS.south)) * 100;
+  return {
+    left: clamp(x, 5, 95),
+    top: clamp(y, 8, 92),
+  };
+}
+
+function renderBeachMap() {
+  const map = document.getElementById('beachMap');
+  if (!map) return;
+
+  map.innerHTML = '<div class="island-outline" aria-hidden="true"></div>';
+  for (const beach of beachCatalog.beaches) {
+    const point = mapPosition(beach);
+    const pin = document.createElement('button');
+    pin.type = 'button';
+    pin.className = 'map-pin';
+    pin.style.left = point.left + '%';
+    pin.style.top = point.top + '%';
+    pin.dataset.beachId = beach.id;
+    pin.title = beach.name;
+    pin.setAttribute('aria-label', 'Choose ' + beach.name);
+    pin.addEventListener('click', () => chooseBeach(beach.id, { updateUrl: true }));
+    map.appendChild(pin);
+  }
+}
+
+function updateBeachControls() {
+  const select = document.getElementById('beachSelect');
+  if (select) select.value = currentBeach.id;
+
+  const savedId = savedDefaultBeachId();
+  const savedBeach = savedId ? beachCatalog.beaches.find((beach) => beach.id === savedId) : null;
+  const badge = document.getElementById('defaultBeachBadge');
+  if (badge) {
+    badge.textContent = savedBeach ? 'Default: ' + (savedBeach.shortName || savedBeach.name) : '';
+  }
+
+  const btn = document.getElementById('btnDefaultBeach');
+  if (btn) {
+    const isDefault = savedId === currentBeach.id;
+    btn.textContent = isDefault ? 'Default set' : 'Set default';
+    btn.disabled = isDefault;
+  }
+
+  document.querySelectorAll('.map-pin').forEach((pin) => {
+    pin.classList.toggle('active', pin.dataset.beachId === currentBeach.id);
+  });
+}
+
+function renderDogRule(date) {
+  const el = document.getElementById('dogRule');
+  if (!el) return;
+  const access = CORE.dogAccessForDate(currentBeach, date || new Date());
+  el.className = 'dog-rule ' + access.kind;
+  const title = document.createElement('strong');
+  title.textContent = access.title;
+  const detail = document.createElement('span');
+  detail.textContent = access.message + (access.detail ? ' ' + access.detail : '');
+  el.replaceChildren(title, detail);
+}
+
+function renderConfidenceNote() {
+  const el = document.getElementById('confidenceNote');
+  if (!el) return;
+  const tide = currentBeach.confidence.tide || `Live ${currentBeach.stationName} tide station where available.`;
+  const thresholds = currentBeach.confidence.thresholds || 'Beach thresholds are estimated. Verify conditions on arrival.';
+  el.textContent = tide + ' ' + thresholds;
+}
+
 function applyBeachConfig(beach) {
   currentBeach = beach;
   RATING = CORE.createRatingModel(beach.thresholds);
 
-  document.title = beach.name + ' Walk';
+  document.title = beach.name + ' Dog Walk';
   document.getElementById('beachTitle').textContent = beach.name;
   document.getElementById('beachSubtitle').textContent = beach.subtitle || '';
   document.querySelector('.rating-label').textContent = beach.copy.ratingLabel || 'Beach Walkability';
@@ -145,6 +289,9 @@ function applyBeachConfig(beach) {
     `Tidal data from UK Admiralty API (${beach.stationName}, station ${beach.stationId}) where available; harmonic model as fallback.`;
   document.getElementById('safetyDisclaimer').textContent =
     beach.copy.disclaimer || 'Not for navigation. Always check conditions on arrival.';
+  renderDogRule(currentViewDate || new Date());
+  renderConfidenceNote();
+  updateBeachControls();
 }
 
 function tideCacheKey() {
@@ -445,6 +592,8 @@ function update(date) {
     label.innerHTML = 'Live — updates every minute';
     label.style.display = 'block';
   }
+
+  renderDogRule(date);
 }
 
 // =========================================
@@ -647,6 +796,14 @@ document.getElementById('btnCheck').addEventListener('click', () => {
 
 document.getElementById('btnNow').addEventListener('click', startLive);
 
+document.getElementById('beachSelect').addEventListener('change', (event) => {
+  chooseBeach(event.target.value, { updateUrl: true });
+});
+
+document.getElementById('btnDefaultBeach').addEventListener('click', () => {
+  if (saveDefaultBeachId(currentBeach.id)) updateBeachControls();
+});
+
 function setDefaultPickerValue() {
   const now = new Date();
   const pad = n => n.toString().padStart(2, '0');
@@ -657,19 +814,47 @@ function setDefaultPickerValue() {
 async function init() {
   setDataStatus('estimate', 'Loading live tide data...');
   const config = await loadBeachConfig();
-  const beach = CORE.normalizeBeachConfig(config, selectedBeachId());
-  applyBeachConfig(beach);
+  beachCatalog = CORE.normalizeBeachCatalog(config);
+  renderBeachOptions();
+  renderBeachMap();
+  const requestedBeachId = urlBeachId();
+  const selected = CORE.selectBeachConfig(beachCatalog, requestedBeachId, savedDefaultBeachId());
+  applyBeachConfig(selected.beach);
+  if (requestedBeachId && (selected.invalidRequested || selected.beach.id !== requestedBeachId)) {
+    updateUrlBeach(selected.beach.id);
+  }
   setDefaultPickerValue();
 
   // Start immediately with the fallback model, then upgrade to real API data.
   startLive();
+  const requestToken = ++tideRequestToken;
   const result = await fetchTideEvents();
+  if (requestToken !== tideRequestToken) return;
   if (result.events && Array.isArray(result.events) && result.events.length > 0) {
     apiTideEvents = result.events;
     update(currentViewDate || new Date());
   } else {
     update(currentViewDate || new Date());
   }
+}
+
+async function chooseBeach(beachId, options) {
+  const selected = CORE.selectBeachConfig(beachCatalog, beachId, savedDefaultBeachId());
+  if (options && options.updateUrl) updateUrlBeach(selected.beach.id);
+
+  apiTideEvents = null;
+  tideFetchError = null;
+  applyBeachConfig(selected.beach);
+  setDataStatus('estimate', 'Loading live tide data...');
+  startLive();
+
+  const requestToken = ++tideRequestToken;
+  const result = await fetchTideEvents();
+  if (requestToken !== tideRequestToken) return;
+  if (result.events && Array.isArray(result.events) && result.events.length > 0) {
+    apiTideEvents = result.events;
+  }
+  update(currentViewDate || new Date());
 }
 
 init();

@@ -464,6 +464,174 @@
     background: rgba(232,115,90,0.2);
   }
 
+  /* === BEACH PICKER === */
+  .beach-picker-card {
+    padding: 18px;
+  }
+
+  .beach-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .beach-picker-head h3 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-light);
+  }
+
+  .default-badge {
+    min-height: 14px;
+    color: var(--ocean-light);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .beach-select-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .beach-select-row select {
+    min-width: 0;
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #e0e8ee;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: var(--text-dark);
+    font-family: inherit;
+    font-size: 15px;
+    outline: none;
+  }
+
+  .beach-select-row select:focus {
+    border-color: var(--ocean-light);
+  }
+
+  .btn-default {
+    padding: 0 14px;
+    border: 2px solid var(--ocean-mid);
+    border-radius: 12px;
+    background: var(--ocean-mid);
+    color: white;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .btn-default:disabled {
+    border-color: #d8e2e8;
+    background: #eef3f6;
+    color: var(--text-light);
+    cursor: default;
+  }
+
+  .beach-map {
+    position: relative;
+    height: 154px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(46,134,171,0.15), rgba(72,184,159,0.16));
+    border: 1px solid rgba(46,134,171,0.16);
+  }
+
+  .island-outline {
+    position: absolute;
+    inset: 18px 28px 16px 26px;
+    background: rgba(255,255,255,0.72);
+    box-shadow: inset 0 0 0 1px rgba(12,45,72,0.08), 0 8px 22px rgba(12,45,72,0.08);
+    clip-path: polygon(6% 48%, 15% 34%, 30% 25%, 48% 17%, 68% 21%, 88% 35%, 95% 50%, 82% 65%, 61% 77%, 36% 82%, 18% 71%);
+  }
+
+  .map-pin {
+    position: absolute;
+    z-index: 2;
+    width: 13px;
+    height: 13px;
+    transform: translate(-50%, -50%);
+    border: 2px solid white;
+    border-radius: 50%;
+    background: var(--ocean-light);
+    box-shadow: 0 2px 8px rgba(12,45,72,0.3);
+    cursor: pointer;
+  }
+
+  .map-pin.active {
+    width: 17px;
+    height: 17px;
+    background: var(--star-gold);
+    box-shadow: 0 0 0 3px rgba(245,166,35,0.24), 0 2px 8px rgba(12,45,72,0.34);
+  }
+
+  .map-pin:focus-visible {
+    outline: 3px solid var(--ocean-deep);
+    outline-offset: 2px;
+  }
+
+  .dog-rule {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .dog-rule strong {
+    font-size: 12px;
+    color: var(--text-dark);
+  }
+
+  .dog-rule span {
+    color: var(--text-mid);
+  }
+
+  .dog-rule.allowed {
+    background: rgba(72,184,159,0.13);
+    border-left: 4px solid var(--seafoam);
+  }
+
+  .dog-rule.partial {
+    background: rgba(245,166,35,0.13);
+    border-left: 4px solid var(--star-gold);
+  }
+
+  .dog-rule.restricted {
+    background: rgba(232,115,90,0.13);
+    border-left: 4px solid var(--coral);
+  }
+
+  .confidence-note {
+    margin-top: 9px;
+    color: var(--text-light);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  @media (max-width: 360px) {
+    .beach-select-row {
+      grid-template-columns: 1fr;
+    }
+
+    .btn-default {
+      min-height: 42px;
+    }
+  }
+
   /* === DISCLAIMER === */
   .disclaimer {
     text-align: center;

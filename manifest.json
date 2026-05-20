@@ -1,7 +1,7 @@
 {
-  "name": "Gurnard Beach Walk",
+  "name": "Isle of Wight Beach Walk",
   "short_name": "Beach Walk",
-  "description": "Your guide to the Gurnard Beach walk on the Isle of Wight",
+  "description": "Dog-walk tide and weather windows for Isle of Wight beaches",
   "start_url": "/gurnard-beach-walk/",
   "scope": "/gurnard-beach-walk/",
   "display": "standalone",

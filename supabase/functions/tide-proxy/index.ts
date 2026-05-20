@@ -5,6 +5,15 @@ const CORS_HEADERS = {
 };
 
 const DEFAULT_STATION_ID = '0060'; // Cowes, Isle of Wight
+const DEFAULT_STATION_IDS = [
+  '0046', // Totland Bay
+  '0048', // Freshwater
+  '0051', // Ventnor
+  '0053', // Sandown
+  '0054', // Bembridge Harbour
+  '0058', // Ryde
+  '0060', // Cowes
+];
 const ADMIRALTY_BASE = 'https://admiraltyapi.azure-api.net/uktidalapi/api/V1';
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
@@ -28,7 +37,7 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 
 function allowedStationIds() {
   return new Set(
-    (Deno.env.get('ALLOWED_STATION_IDS') || DEFAULT_STATION_ID)
+    (Deno.env.get('ALLOWED_STATION_IDS') || DEFAULT_STATION_IDS.join(','))
       .split(',')
       .map((id) => id.trim())
       .filter(Boolean),

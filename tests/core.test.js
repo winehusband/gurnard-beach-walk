@@ -65,6 +65,75 @@ test('beach config normalizes and selects requested beaches', () => {
   assert.equal(typeof beach.coordinates.latitude, 'number');
 });
 
+test('beach catalog contains the Isle of Wight dog-walk rollout set', () => {
+  const configPath = path.join(__dirname, '..', 'beaches.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  const catalog = core.normalizeBeachCatalog(config);
+  const stationIds = new Set(catalog.beaches.map((beach) => beach.stationId));
+
+  assert.equal(catalog.beaches.length, 20);
+  assert.ok(stationIds.has('0060'));
+  assert.ok(stationIds.has('0058'));
+  assert.ok(stationIds.has('0053'));
+  assert.ok(stationIds.has('0046'));
+
+  for (const beach of catalog.beaches) {
+    assert.equal(typeof beach.id, 'string');
+    assert.equal(typeof beach.name, 'string');
+    assert.equal(typeof beach.coordinates.latitude, 'number');
+    assert.equal(typeof beach.coordinates.longitude, 'number');
+    assert.equal(typeof beach.dogRules.status, 'string');
+    assert.equal(typeof beach.confidence.thresholds, 'string');
+  }
+});
+
+test('tide proxy default allowlist covers every configured station', () => {
+  const configPath = path.join(__dirname, '..', 'beaches.json');
+  const proxyPath = path.join(__dirname, '..', 'supabase', 'functions', 'tide-proxy', 'index.ts');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  const proxySource = fs.readFileSync(proxyPath, 'utf8');
+  const stationIds = new Set(config.beaches.map((beach) => beach.stationId));
+
+  for (const stationId of stationIds) {
+    assert.ok(proxySource.includes(`'${stationId}'`), `missing proxy station ${stationId}`);
+  }
+});
+
+test('beach selection prefers URL, then saved default, then config default', () => {
+  const config = {
+    defaultBeachId: 'gurnard',
+    beaches: [
+      { id: 'gurnard', stationId: '0060', coordinates: { latitude: 1, longitude: 1 } },
+      { id: 'totland-bay', stationId: '0046', coordinates: { latitude: 2, longitude: 2 } },
+      { id: 'ryde-west', stationId: '0058', coordinates: { latitude: 3, longitude: 3 } },
+    ],
+  };
+
+  assert.equal(core.selectBeachConfig(config, 'ryde-west', 'totland-bay').beach.id, 'ryde-west');
+  assert.equal(core.selectBeachConfig(config, null, 'totland-bay').beach.id, 'totland-bay');
+  assert.equal(core.selectBeachConfig(config, null, null).beach.id, 'gurnard');
+
+  const invalid = core.selectBeachConfig(config, 'missing', 'totland-bay');
+  assert.equal(invalid.beach.id, 'totland-bay');
+  assert.equal(invalid.invalidRequested, true);
+});
+
+test('dog access reflects seasonal restrictions and year-round stretches', () => {
+  const restrictedBeach = {
+    dogRules: {
+      status: 'seasonal-restriction',
+      restrictionMonths: { startMonth: 5, startDay: 1, endMonth: 9, endDay: 30 },
+    },
+  };
+  const partialBeach = { dogRules: { status: 'year-round-area' } };
+  const openBeach = { dogRules: { status: 'year-round' } };
+
+  assert.equal(core.dogAccessForDate(restrictedBeach, new Date('2026-05-20T12:00:00')).kind, 'restricted');
+  assert.equal(core.dogAccessForDate(restrictedBeach, new Date('2026-10-01T12:00:00')).kind, 'allowed');
+  assert.equal(core.dogAccessForDate(partialBeach, new Date('2026-05-20T12:00:00')).kind, 'partial');
+  assert.equal(core.dogAccessForDate(openBeach, new Date('2026-05-20T12:00:00')).kind, 'allowed');
+});
+
 test('findWalkWindow returns the current window when conditions are already good', () => {
   const rating = core.createRatingModel({ high: 3.8, inlet: 2.15, low: 1.55 });
   const start = new Date('2026-05-20T10:00:00Z');
