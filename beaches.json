@@ -1,0 +1,27 @@
+{
+  "defaultBeachId": "gurnard",
+  "beaches": [
+    {
+      "id": "gurnard",
+      "name": "Gurnard Beach",
+      "shortName": "Gurnard",
+      "subtitle": "West of the Sailing Club towards Gurnard Luck",
+      "stationId": "0060",
+      "stationName": "Cowes",
+      "coordinates": {
+        "latitude": 50.764,
+        "longitude": -1.321
+      },
+      "thresholds": {
+        "high": 3.8,
+        "inlet": 2.15,
+        "low": 1.55
+      },
+      "copy": {
+        "ratingLabel": "Beach Walkability",
+        "nextWalkTitle": "Next Great Walk",
+        "disclaimer": "Not for navigation. Always check conditions on arrival."
+      }
+    }
+  ]
+}

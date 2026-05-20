@@ -80,3 +80,11 @@
 - A "~ est." badge appears in the UI when falling back to the harmonic model
 - API response cached in localStorage for 1 hour to stay within the 10,000 req/month free tier limit
 - Rating thresholds (INLET=2.15m, HIGH=3.8m, LOW=1.55m) and scoring curves unchanged
+
+### v7 (multi-beach readiness and scaling — May 2026)
+- Beach-specific metadata moved to `beaches.json`: station id, station name, coordinates, thresholds, and display copy
+- Tide proxy now accepts an allowed `station` query parameter and caches upstream Admiralty responses server-side for 30 minutes
+- Browser cache keys now include beach/station so expanded beach coverage does not mix tide data
+- Next high/low tide cards now prefer Admiralty API events when available instead of always using the harmonic fallback
+- Visible data status added so users can tell live API data from backup estimates
+- Core rating, interpolation, event selection, walk-window, and config logic covered by Node tests
