@@ -71,7 +71,7 @@ test('beach catalog contains the Isle of Wight dog-walk rollout set', () => {
   const catalog = core.normalizeBeachCatalog(config);
   const stationIds = new Set(catalog.beaches.map((beach) => beach.stationId));
 
-  assert.equal(catalog.beaches.length, 20);
+  assert.equal(catalog.beaches.length, 21);
   assert.ok(stationIds.has('0060'));
   assert.ok(stationIds.has('0058'));
   assert.ok(stationIds.has('0053'));

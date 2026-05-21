@@ -42,6 +42,26 @@
       }
     },
     {
+      "id": "thorness-bay",
+      "name": "Thorness Bay",
+      "shortName": "Thorness",
+      "subtitle": "Quiet north-west bay between Gurnard and Newtown",
+      "area": "North coast",
+      "stationId": "0060",
+      "stationName": "Cowes",
+      "coordinates": { "latitude": 50.7416, "longitude": -1.3557 },
+      "thresholds": { "high": 3.75, "inlet": 2.1, "low": 1.5 },
+      "dogRules": {
+        "status": "year-round",
+        "summary": "No council seasonal beach exclusion is listed for Thorness Bay.",
+        "detail": "Use local signs and keep dogs under close control around wildlife areas."
+      },
+      "confidence": {
+        "tide": "Live Cowes tide station where available.",
+        "thresholds": "Starter Thorness estimate based on nearby Gurnard and Cowes tides."
+      }
+    },
+    {
       "id": "cowes",
       "name": "Cowes Beach",
       "shortName": "Cowes",

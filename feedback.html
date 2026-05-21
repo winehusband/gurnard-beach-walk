@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#0c2d48">
+<title>Beach Feedback</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <h1>Beach Feedback</h1>
+  <div class="subtitle" id="feedbackBeachName">Help tune the walk ratings</div>
+</header>
+
+<div class="container feedback-page">
+  <div class="card feedback-card">
+    <h2>What to send</h2>
+    <p>
+      The app gets the tide times from a nearby tide station. The bit that needs local help is the star rating:
+      how much beach is actually usable at that place.
+    </p>
+    <p>
+      Send the beach, date, time, and your 0-5 rating. A short note or photo helps a lot.
+    </p>
+    <p class="feedback-send-note">
+      Send it back to me in a message. If you have this app, you probably already know where to find me.
+    </p>
+  </div>
+
+  <div class="card feedback-card">
+    <h2>Star guide</h2>
+    <div class="rating-guide">
+      <div><strong>0 stars</strong><span>No beach. Do not bother.</span></div>
+      <div><strong>1-2 stars</strong><span>Not really walkable. Too narrow, blocked, or closing fast.</span></div>
+      <div><strong>3 stars</strong><span>Good enough for a proper walk. Worth going, but not loads of space.</span></div>
+      <div><strong>4 stars</strong><span>Great walk. Plenty of beach and room to enjoy it.</span></div>
+      <div><strong>5 stars</strong><span>Huge beach. Big open walk, as far as you reasonably want to go.</span></div>
+    </div>
+  </div>
+
+  <div class="card feedback-card">
+    <h2>Copy this</h2>
+    <div class="feedback-template" id="feedbackTemplate">
+Beach:
+Date:
+Time:
+Rating, 0-5:
+Was the tide coming in, going out, or not sure:
+What did the beach look like:
+Could you walk far:
+Anything awkward or unsafe:
+    </div>
+    <button class="feedback-copy" id="feedbackCopyButton" type="button">Copy template</button>
+  </div>
+
+  <a class="feedback-back" id="feedbackBackLink" href="./">Back to the beach app</a>
+</div>
+
+<script>
+async function initFeedbackPage() {
+  const params = new URLSearchParams(window.location.search);
+  const beachId = params.get('beach') || '';
+  const title = document.getElementById('feedbackBeachName');
+  const template = document.getElementById('feedbackTemplate');
+  const back = document.getElementById('feedbackBackLink');
+  const copy = document.getElementById('feedbackCopyButton');
+
+  let beachName = '';
+  if (beachId) {
+    try {
+      const resp = await fetch('beaches.json', { cache: 'no-store' });
+      if (resp.ok) {
+        const catalog = await resp.json();
+        const beach = Array.isArray(catalog.beaches)
+          ? catalog.beaches.find((item) => item.id === beachId)
+          : null;
+        beachName = beach ? beach.name : '';
+      }
+    } catch (e) {}
+  }
+
+  if (beachName) {
+    title.textContent = 'Help tune ' + beachName;
+    template.textContent = template.textContent.replace('Beach:', 'Beach: ' + beachName);
+    back.href = './?beach=' + encodeURIComponent(beachId);
+  }
+
+  if (copy && navigator.clipboard) {
+    copy.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(template.textContent.trim());
+      copy.textContent = 'Copied';
+      setTimeout(() => { copy.textContent = 'Copy template'; }, 1400);
+    });
+  }
+}
+
+initFeedbackPage();
+</script>
+</body>
+</html>

@@ -622,6 +622,13 @@
     line-height: 1.35;
   }
 
+  .confidence-note a {
+    color: var(--ocean-mid);
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 1px dotted rgba(20,83,116,0.35);
+  }
+
   @media (max-width: 360px) {
     .beach-select-row {
       grid-template-columns: 1fr;
@@ -647,6 +654,97 @@
   }
   .disclaimer-credit a:hover {
     color: rgba(255,255,255,0.9);
+  }
+
+  /* === FEEDBACK PAGE === */
+  .feedback-page {
+    padding-bottom: 44px;
+  }
+
+  .feedback-card h2 {
+    margin-bottom: 10px;
+    color: var(--text-dark);
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .feedback-card p {
+    margin-bottom: 10px;
+    color: var(--text-mid);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .feedback-send-note {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-left: 4px solid var(--seafoam);
+    border-radius: 12px;
+    background: rgba(72,184,159,0.13);
+    font-weight: 600;
+  }
+
+  .rating-guide {
+    display: grid;
+    gap: 9px;
+  }
+
+  .rating-guide div {
+    display: grid;
+    gap: 3px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid #eef2f5;
+  }
+
+  .rating-guide div:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .rating-guide strong {
+    color: var(--text-dark);
+    font-size: 14px;
+  }
+
+  .rating-guide span {
+    color: var(--text-mid);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .feedback-template {
+    white-space: pre-wrap;
+    margin-bottom: 14px;
+    padding: 14px;
+    border: 1px solid #d9e5ec;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: var(--text-dark);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .feedback-copy,
+  .feedback-back {
+    display: block;
+    width: 100%;
+    padding: 13px 16px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--ocean-mid);
+    color: white;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .feedback-back {
+    margin-top: 4px;
+    background: rgba(255,255,255,0.18);
   }
 
   /* Animations */

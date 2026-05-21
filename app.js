@@ -273,7 +273,15 @@ function renderConfidenceNote() {
   if (!el) return;
   const tide = currentBeach.confidence.tide || `Live ${currentBeach.stationName} tide station where available.`;
   const thresholds = currentBeach.confidence.thresholds || 'Beach thresholds are estimated. Verify conditions on arrival.';
+  const needsFeedback = /\bestimat/i.test(thresholds) && !/\bcalibrat/i.test(thresholds);
   el.textContent = tide + ' ' + thresholds;
+  if (needsFeedback) {
+    const text = document.createTextNode(' This is a good first guess, not the final word. ');
+    const link = document.createElement('a');
+    link.href = 'feedback.html?beach=' + encodeURIComponent(currentBeach.id);
+    link.textContent = 'Help tune this beach';
+    el.append(text, link);
+  }
 }
 
 function applyBeachConfig(beach) {
