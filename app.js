@@ -138,27 +138,11 @@ const ISLAND_BOUNDS = {
   east: -1.075,
 };
 const CCO_SENSOR_BY_BEACH_ID = {
-  'gurnard': 'Milford',
-  'thorness-bay': 'Milford',
-  'cowes': 'Milford',
-  'east-cowes': 'Hayling Island',
-  'ryde-west': 'Hayling Island',
-  'appley-east': 'Hayling Island',
-  'seagrove': 'Hayling Island',
-  'priory-bay': 'Sandown Bay',
+  // Only use observed CCO SST where the station is on the same coastal water body.
+  // Mainland Solent stations are not representative enough for north-coast beaches.
   'bembridge': 'Sandown Bay',
   'whitecliff-bay': 'Sandown Bay',
   'yaverland-east': 'Sandown Bay',
-  'chilton-chine': 'Milford',
-  'brook-bay': 'Milford',
-  'atherfield-bay': 'Sandown Bay',
-  'rocken-end': 'Sandown Bay',
-  'steephill-cove': 'Sandown Bay',
-  'bonchurch': 'Sandown Bay',
-  'ventnor': 'Sandown Bay',
-  'freshwater-bay': 'Milford',
-  'colwell-east': 'Milford',
-  'totland-bay': 'Milford',
 };
 
 let waterTempRequestToken = 0;
