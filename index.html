@@ -47,6 +47,19 @@
     <div class="rating-desc" id="ratingDesc"></div>
   </div>
 
+  <div class="card water-temp-card" id="waterTempCard">
+    <div>
+      <div class="water-temp-label">Sea Temperature</div>
+      <div class="water-temp-source" id="waterTempSource">Loading...</div>
+      <div class="water-temp-meta" id="waterTempMeta"></div>
+    </div>
+    <div class="water-temp-display">
+      <span class="water-temp-val" id="waterTempVal">--</span>
+      <span class="water-temp-unit">°C</span>
+      <span class="water-temp-badge" id="waterTempBadge"></span>
+    </div>
+  </div>
+
   <div class="card next-walk-card" id="nextWalkCard">
     <h3>Next Great Walk</h3>
     <div class="next-walk-time" id="nextWalkTime"></div>
@@ -111,6 +124,7 @@
 
   <div class="disclaimer">
     <span id="dataDisclaimer">Tidal data from UK Admiralty API where available; harmonic model as fallback.</span><br>
+    <span id="waterTempDisclaimer">Water temperature uses CCO observed stations where available, with Open-Meteo marine model data as fallback.</span><br>
     <span id="safetyDisclaimer">Not for navigation. Always check conditions on arrival.</span><br>
     <span class="disclaimer-privacy">Privacy-friendly analytics — no cookies, no tracking.</span><br>
     <span class="disclaimer-credit">Created for fun by <a href="https://instagram.com/wine.husband" target="_blank" rel="noopener">@wine.husband</a></span>

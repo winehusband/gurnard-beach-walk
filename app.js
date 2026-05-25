@@ -126,7 +126,9 @@ let apiTideEvents = null; // null = not yet loaded or failed
 let tideFetchError = null;
 
 const EDGE_FN_URL = 'https://gsucaxeqzluzbmvonsmj.supabase.co/functions/v1/tide-proxy';
+const WATER_TEMP_FN_URL = 'https://gsucaxeqzluzbmvonsmj.supabase.co/functions/v1/water-temp-proxy';
 const CACHE_TTL = 3600000; // 1 hour
+const WATER_TEMP_CACHE_TTL = 30 * 60000;
 const BEACH_CONFIG_URL = 'beaches.json';
 const DEFAULT_BEACH_KEY = 'beach_default_id';
 const ISLAND_BOUNDS = {
@@ -135,6 +137,31 @@ const ISLAND_BOUNDS = {
   west: -1.565,
   east: -1.075,
 };
+const CCO_SENSOR_BY_BEACH_ID = {
+  'gurnard': 'Milford',
+  'thorness-bay': 'Milford',
+  'cowes': 'Milford',
+  'east-cowes': 'Hayling Island',
+  'ryde-west': 'Hayling Island',
+  'appley-east': 'Hayling Island',
+  'seagrove': 'Hayling Island',
+  'priory-bay': 'Sandown Bay',
+  'bembridge': 'Sandown Bay',
+  'whitecliff-bay': 'Sandown Bay',
+  'yaverland-east': 'Sandown Bay',
+  'chilton-chine': 'Milford',
+  'brook-bay': 'Milford',
+  'atherfield-bay': 'Sandown Bay',
+  'rocken-end': 'Sandown Bay',
+  'steephill-cove': 'Sandown Bay',
+  'bonchurch': 'Sandown Bay',
+  'ventnor': 'Sandown Bay',
+  'freshwater-bay': 'Milford',
+  'colwell-east': 'Milford',
+  'totland-bay': 'Milford',
+};
+
+let waterTempRequestToken = 0;
 
 function urlBeachId() {
   const params = new URLSearchParams(window.location.search);
@@ -300,6 +327,7 @@ function applyBeachConfig(beach) {
   renderDogRule(currentViewDate || new Date());
   renderConfidenceNote();
   updateBeachControls();
+  refreshWaterTemperature();
 }
 
 function tideCacheKey() {
@@ -353,6 +381,125 @@ async function fetchTideEvents() {
     tideFetchError = e && e.message ? e.message : 'unknown error';
     return { events: null, error: tideFetchError };
   }
+}
+
+function currentCcoSensor() {
+  return CCO_SENSOR_BY_BEACH_ID[currentBeach.id] || '';
+}
+
+function waterTempCacheKey() {
+  return `beach_water_temp_cache_${currentBeach.id}_${currentCcoSensor() || 'open-meteo'}`;
+}
+
+function setWaterTempLoading() {
+  const val = document.getElementById('waterTempVal');
+  const source = document.getElementById('waterTempSource');
+  const meta = document.getElementById('waterTempMeta');
+  const badge = document.getElementById('waterTempBadge');
+  if (val) val.textContent = '--';
+  if (source) source.textContent = 'Loading...';
+  if (meta) meta.textContent = '';
+  if (badge) {
+    badge.textContent = '';
+    badge.className = 'water-temp-badge';
+  }
+}
+
+function setWaterTempError() {
+  const val = document.getElementById('waterTempVal');
+  const source = document.getElementById('waterTempSource');
+  const meta = document.getElementById('waterTempMeta');
+  const badge = document.getElementById('waterTempBadge');
+  if (val) val.textContent = '--';
+  if (source) source.textContent = 'Water temperature unavailable';
+  if (meta) meta.textContent = 'Try again later.';
+  if (badge) {
+    badge.textContent = 'Unavailable';
+    badge.className = 'water-temp-badge error';
+  }
+}
+
+function renderWaterTemperature(data) {
+  const val = document.getElementById('waterTempVal');
+  const source = document.getElementById('waterTempSource');
+  const meta = document.getElementById('waterTempMeta');
+  const badge = document.getElementById('waterTempBadge');
+  const temperature = typeof data.temperatureC === 'number' ? data.temperatureC : null;
+
+  if (temperature === null) {
+    setWaterTempError();
+    return;
+  }
+
+  if (val) val.textContent = temperature.toFixed(1);
+  if (source) source.textContent = data.label || 'Sea surface temperature';
+  if (badge) {
+    const observed = data.source === 'observed';
+    badge.textContent = observed ? 'Observed' : 'Modelled';
+    badge.className = 'water-temp-badge ' + (observed ? 'observed' : 'modelled');
+  }
+
+  if (!meta) return;
+  if (data.source === 'observed' && data.observed) {
+    const age = typeof data.observed.ageMinutes === 'number'
+      ? Math.max(0, data.observed.ageMinutes)
+      : null;
+    const model = data.modelled && typeof data.modelled.temperatureC === 'number'
+      ? ` Open-Meteo: ${data.modelled.temperatureC.toFixed(1)}°C.`
+      : '';
+    meta.textContent = age !== null
+      ? `Observed ${age} min ago.${model}`
+      : `Observed reading.${model}`;
+    return;
+  }
+
+  if (data.modelled && data.modelled.time) {
+    const modelDate = new Date(data.modelled.time);
+    meta.textContent = isNaN(modelDate.getTime())
+      ? 'Open-Meteo marine model.'
+      : 'Open-Meteo model time ' + formatTime(modelDate) + '.';
+    return;
+  }
+
+  meta.textContent = 'Open-Meteo marine model.';
+}
+
+async function fetchWaterTemperature() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(waterTempCacheKey()) || 'null');
+    if (cached && (Date.now() - cached.ts) < WATER_TEMP_CACHE_TTL) return cached.data;
+  } catch (e) {}
+
+  const { latitude, longitude } = currentBeach.coordinates;
+  const params = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+  });
+  const ccoSensor = currentCcoSensor();
+  if (ccoSensor) params.set('ccoSensor', ccoSensor);
+
+  const resp = await fetch(WATER_TEMP_FN_URL + '?' + params.toString());
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const data = await resp.json();
+  if (typeof data.temperatureC !== 'number') throw new Error('Unexpected response');
+  try {
+    localStorage.setItem(waterTempCacheKey(), JSON.stringify({ ts: Date.now(), data }));
+  } catch (e) {}
+  return data;
+}
+
+function refreshWaterTemperature() {
+  const requestToken = ++waterTempRequestToken;
+  setWaterTempLoading();
+  fetchWaterTemperature()
+    .then((data) => {
+      if (requestToken !== waterTempRequestToken) return;
+      renderWaterTemperature(data);
+    })
+    .catch(() => {
+      if (requestToken !== waterTempRequestToken) return;
+      setWaterTempError();
+    });
 }
 
 function parseEventMs(dt) {
